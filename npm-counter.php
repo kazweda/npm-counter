@@ -28,17 +28,46 @@ class NpmCounter {
 
     const NPMCOUNTER = "npm_counter";
 
+    const BOT_USER_AGENT = '/bot|crawl|spider|slurp|archiver|facebookexternalhit|headless/i';
+
     public function __construct() {
-        add_action( 'init', array( $this, 'mySetCookie'));
+        // フロントの表示時だけカウントする
+        add_action( 'template_redirect', array( $this, 'mySetCookie'));
         add_shortcode( 'npm_counter', array( $this, 'getCount' ));
         add_filter( 'widget_text', 'do_shortcode', 11 );
     }
 
     public function mySetCookie() {
-        if (!isset($_COOKIE[self::NPMCOUNTER]) || $_COOKIE[self::NPMCOUNTER] != "1") {
-            @setCookie(self::NPMCOUNTER, "1", time() + 1800, COOKIEPATH, COOKIE_DOMAIN);
-            $this->countUp();
+        if (!$this->isCountableRequest()) {
+            return;
         }
+        if (!isset($_COOKIE[self::NPMCOUNTER]) || $_COOKIE[self::NPMCOUNTER] != "1") {
+            // Cookie を設定できないときは、アクセスのたびに増えてしまうのでカウントしない
+            if ($this->sendCookie()) {
+                $this->countUp();
+            }
+        }
+    }
+
+    public function isCountableRequest() {
+        if (is_admin() || wp_doing_ajax() || wp_doing_cron()) {
+            return false;
+        }
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return false;
+        }
+        $userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        if ($userAgent === '' || preg_match(self::BOT_USER_AGENT, $userAgent)) {
+            return false;
+        }
+        return true;
+    }
+
+    protected function sendCookie() {
+        if (headers_sent()) {
+            return false;
+        }
+        return setcookie(self::NPMCOUNTER, "1", time() + 1800, COOKIEPATH, COOKIE_DOMAIN);
     }
 
     public function getCount() {
