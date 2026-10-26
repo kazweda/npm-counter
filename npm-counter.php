@@ -1,11 +1,12 @@
 <?php
 /*
 Plugin Name: Npm Counter
-Version: 1.0
+Version: 1.1
 Description: Website Visit Counter
 Author: Kazuaki UEDA
 Author URI: http://www.netplan.co.jp/
 Plugin URI: http://www.netplan.co.jp/
+License: GPLv3 or later
 Text Domain: npm-counter
 */
 
