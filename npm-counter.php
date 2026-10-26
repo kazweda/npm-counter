@@ -75,7 +75,30 @@ class NpmCounter {
     }
 
     public function countUp() {
-        update_option( self::NPMCOUNTER, intval( get_option( self::NPMCOUNTER ) ) + 1 );
+        global $wpdb;
+
+        // 同時アクセスでカウントが抜けないよう、DB 側で加算する
+        $updated = $wpdb->query( $wpdb->prepare(
+            "UPDATE {$wpdb->options} SET option_value = option_value + 1 WHERE option_name = %s",
+            self::NPMCOUNTER
+        ) );
+        if ( ! $updated ) {
+            add_option( self::NPMCOUNTER, 1 );
+            return;
+        }
+
+        // オプションのキャッシュを DB の値に合わせる
+        $count = $wpdb->get_var( $wpdb->prepare(
+            "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
+            self::NPMCOUNTER
+        ) );
+        $alloptions = wp_load_alloptions();
+        if ( isset( $alloptions[ self::NPMCOUNTER ] ) ) {
+            $alloptions[ self::NPMCOUNTER ] = $count;
+            wp_cache_set( 'alloptions', $alloptions, 'options' );
+        } else {
+            wp_cache_set( self::NPMCOUNTER, $count, 'options' );
+        }
     }
 
     public function getCookie() {

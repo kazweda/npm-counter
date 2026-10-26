@@ -34,6 +34,32 @@ class NpmCounterTest extends WP_UnitTestCase {
         $this->assertSame( 5002, intval( get_option( self::NPMCOUNTER ) ) );
     }
 
+    function test_countup_without_option() {
+        delete_option( self::NPMCOUNTER );
+        $this->plugin->countUp();
+        $this->assertSame( 1, intval( get_option( self::NPMCOUNTER ) ) );
+        $this->plugin->countUp();
+        $this->assertSame( 2, intval( get_option( self::NPMCOUNTER ) ) );
+    }
+
+    function test_countup_not_autoloaded_option() {
+        delete_option( self::NPMCOUNTER );
+        add_option( self::NPMCOUNTER, 5000, '', false );
+        get_option( self::NPMCOUNTER );
+        $this->plugin->countUp();
+        $this->assertSame( 5001, intval( get_option( self::NPMCOUNTER ) ) );
+    }
+
+    // 別のリクエストが先に加算していても、その分を失わない
+    function test_countup_keeps_concurrent_increment() {
+        global $wpdb;
+        update_option( self::NPMCOUNTER, 5000 );
+        get_option( self::NPMCOUNTER );
+        $wpdb->update( $wpdb->options, array( 'option_value' => '5001' ), array( 'option_name' => self::NPMCOUNTER ) );
+        $this->plugin->countUp();
+        $this->assertSame( 5002, intval( get_option( self::NPMCOUNTER ) ) );
+    }
+
     function test_not_increment_while_session() {
         update_option( self::NPMCOUNTER, 5000 );
         $this->plugin->mySetCookie();
